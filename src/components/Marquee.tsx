@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect, useState, useRef } from "react";
+import React, { Fragment, useEffect, useRef, useState } from "react";
 import "./Marquee.scss";
 
 interface MarqueeProps {
@@ -114,12 +114,18 @@ const Marquee: React.FC<MarqueeProps> = ({
   // React Hooks
   const [containerWidth, setContainerWidth] = useState(0);
   const [marqueeWidth, setMarqueeWidth] = useState(0);
-  const [isMounted, setIsMounted] = useState(false);
+  const [hasWindow, setHasWindow] = useState(false);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const marqueeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!isMounted) return;
+    // Do not do any calculations when window is not defined (e.g. Next.js)
+    if (typeof window === `undefined`) {
+      return;
+    }
+
+    setHasWindow(true);
 
     const calculateWidth = () => {
       // Find width of container and width of marquee
@@ -130,15 +136,14 @@ const Marquee: React.FC<MarqueeProps> = ({
     };
 
     calculateWidth();
+
     // Rerender on window resize
     window.addEventListener("resize", calculateWidth);
+
+    // Remove event listeners when component is unmounted
     return () => {
       window.removeEventListener("resize", calculateWidth);
     };
-  }, [isMounted]);
-
-  useEffect(() => {
-    setIsMounted(true);
   }, []);
 
   // Gradient color in an unfinished rgba format
@@ -152,44 +157,48 @@ const Marquee: React.FC<MarqueeProps> = ({
 
   return (
     <Fragment>
-      {!isMounted ? null : (
-        <div
-          ref={containerRef}
-          style={{
-            ...style,
-            ["--pause-on-hover" as string]: !play || pauseOnHover ? "paused" : "running",
-            ["--pause-on-click" as string]: !play || (pauseOnHover && !pauseOnClick) || pauseOnClick ? "paused" : "running",
-          }}
-          className={className + " marquee-container"}
-        >
-          {gradient && (
-            <div
-              style={{
-                ["--gradient-color" as string]: `${rgbaGradientColor}, 1), ${rgbaGradientColor}, 0)`,
-                ["--gradient-width" as string]:
-                  typeof gradientWidth === "number"
-                    ? `${gradientWidth}px`
-                    : gradientWidth,
-              }}
-              className="overlay"
-            />
-          )}
+      <div
+        ref={containerRef}
+        style={{
+          ...style,
+          ["--pause-on-hover" as string]:
+            !play || pauseOnHover ? "paused" : "running",
+          ["--pause-on-click" as string]:
+            !play || (pauseOnHover && !pauseOnClick) || pauseOnClick
+              ? "paused"
+              : "running",
+        }}
+        className={className + " marquee-container"}
+      >
+        {gradient && (
           <div
-            ref={marqueeRef}
             style={{
-              ["--play" as string]: play ? "running" : "paused",
-              ["--direction" as string]:
-                direction === "left" ? "normal" : "reverse",
-              ["--duration" as string]: `${duration}s`,
-              ["--delay" as string]: `${delay}s`,
-              ["--iteration-count" as string]: !!loop ? `${loop}` : "infinite",
+              ["--gradient-color" as string]: `${rgbaGradientColor}, 1), ${rgbaGradientColor}, 0)`,
+              ["--gradient-width" as string]:
+                typeof gradientWidth === "number"
+                  ? `${gradientWidth}px`
+                  : gradientWidth,
             }}
-            className="marquee"
-            onAnimationIteration={onCycleComplete}
-            onAnimationEnd={onFinish}
-          >
-            {children}
-          </div>
+            className="overlay"
+          />
+        )}
+        <div
+          ref={marqueeRef}
+          style={{
+            ["--play" as string]: play ? "running" : "paused",
+            ["--direction" as string]:
+              direction === "left" ? "normal" : "reverse",
+            ["--duration" as string]: `${duration}s`,
+            ["--delay" as string]: `${delay}s`,
+            ["--iteration-count" as string]: !!loop ? `${loop}` : "infinite",
+          }}
+          className="marquee"
+          onAnimationIteration={onCycleComplete}
+          onAnimationEnd={onFinish}
+        >
+          {children}
+        </div>
+        {hasWindow && (
           <div
             style={{
               ["--play" as string]: play ? "running" : "paused",
@@ -204,8 +213,8 @@ const Marquee: React.FC<MarqueeProps> = ({
           >
             {children}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </Fragment>
   );
 };
